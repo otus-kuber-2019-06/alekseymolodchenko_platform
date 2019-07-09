@@ -1,4 +1,8 @@
-FROM nginx:mainline-alpine
-RUN rm /etc/nginx/conf.d/*
-COPY web-app.conf /etc/nginx/conf.d/
-COPY *.html /usr/share/nginx/html
+FROM python:3.7-alpine3.10
+
+WORKDIR /app
+VOLUME ["/app"]
+USER 1001:1001
+EXPOSE 8000
+
+ENTRYPOINT ["python3", "-m", "http.server"]
