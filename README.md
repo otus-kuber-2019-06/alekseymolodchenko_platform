@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/otus-kuber-2019-06/alekseymolodchenko__platform.svg?branch=master)](https://travis-ci.com/otus-kuber-2019-06/alekseymolodchenko__platform)
+[![Build Status](https://travis-ci.com/otus-kuber-2019-06/alekseymolodchenko__platform.svg?branch=master)](https://travis-ci.com/otus-kuber-2019-06/alekseymolodchenko_platform)
 # Инфраструктурная платформа на основе Kubernetes
 
 ## HW #1 - Знакомство с Kubernetes
@@ -297,3 +297,206 @@
   
   </p></details>
 
+## HW #2 - Безопасность и управлении доступом Kubernetes
+
+- Cоздание ServiceAccount с ролью admin в рамках всего кластера
+
+  <details><summary>Подробнее</summary><p>
+
+  ```yml
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: bob
+      namespace: default
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1beta1
+    kind: ClusterRoleBinding
+    metadata:
+      name: bob
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-admin
+    subjects:
+      - kind: ServiceAccount
+        name: bob
+        namespace: default
+  ```
+  </p></details>
+
+- Cоздание ServiceAccount без доступа к кластеру
+
+  <details><summary>Подробнее</summary><p>
+
+  ```yml
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: dave
+  ```
+  </p></details>
+
+- Cоздание Namespace prometheus
+
+  <details><summary>Подробнее</summary><p>
+
+  ```yml
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: prometheus
+  ```
+  </p></details>
+
+- Cоздание Namespace prometheus
+
+  <details><summary>Подробнее</summary><p>
+
+  ```yml
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: prometheus
+  ```
+  </p></details>
+
+- Cоздание ServiceAccount в неймспейсе prometheus
+
+  <details><summary>Подробнее</summary><p>
+
+  ```yml
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: carol
+      namespace: prometheus
+  ```
+  </p></details>
+
+- Предоставление возможностей get, list, watch для всех ServiceAccount в неймспейсе prometheus в отношении объектов Pods всего кластера 
+
+  <details><summary>Подробнее</summary><p>
+
+  ```yml
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1beta1
+    kind: ClusterRole
+    metadata:
+      name: pod-reader
+    rules:
+    - apiGroups: [""]
+      resources: ["pods"]
+      verbs: ["get", "list", "watch"]
+
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: pod-reader
+    subjects:
+    - kind: Group
+      name: system:serviceaccounts:prometheus
+      apiGroup: rbac.authorization.k8s.io
+    roleRef:
+      kind: ClusterRole
+      name: pod-reader
+      apiGroup: rbac.authorization.k8s.io
+  ```
+  </p></details>
+
+- Cоздание Namespace dev
+
+  <details><summary>Подробнее</summary><p>
+
+  ```yml
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: dev
+  ```
+  </p></details>
+
+- Cоздание ServiceAccount в неймспейсе dev c правами admin
+
+  <details><summary>Подробнее</summary><p>
+
+  ```yml
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: jane
+      namespace: dev
+    ---
+    kind: Role
+    apiVersion: rbac.authorization.k8s.io/v1beta1
+    metadata:
+      name: admin-ns
+      namespace: dev
+    rules:
+    - apiGroups: ["*"]
+      resources: ["*"]
+      verbs: ["*"]
+    ---
+    kind: RoleBinding
+    apiVersion: rbac.authorization.k8s.io/v1beta1
+    metadata:
+      name: admin-ns-binding
+      namespace: dev
+    subjects:
+    - kind: ServiceAccount
+      name: jane
+      namespace: dev
+    roleRef:
+      kind: Role
+      name: admin-ns
+      apiGroup: rbac.authorization.k8s.io
+
+  ```
+  </p></details>
+
+- Cоздание ServiceAccount в неймспейсе dev c правами view
+
+  <details><summary>Подробнее</summary><p>
+
+  ```yml
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: ken
+      namespace: dev
+    ---
+    kind: Role
+    apiVersion: rbac.authorization.k8s.io/v1beta1
+    metadata:
+      name: view-ns
+      namespace: dev
+    rules:
+    - apiGroups: ["*"]
+      resources: ["*"]
+      verbs: ["get", "list", "watch"]
+    ---
+    kind: RoleBinding
+    apiVersion: rbac.authorization.k8s.io/v1beta1
+    metadata:
+      name: view-ns-binding
+      namespace: dev
+    subjects:
+    - kind: ServiceAccount
+      name: ken
+      namespace: dev
+    roleRef:
+      kind: Role
+      name: view-ns
+      apiGroup: rbac.authorization.k8s.io
+
+  ```
+  </p></details>
