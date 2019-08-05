@@ -500,3 +500,134 @@
 
   ```
   </p></details>
+
+
+## HW #4 - Volumes, Storages,StatefulSet
+
+### kind
+
+- Установка kind
+
+  ```bash
+  $ cd /tmp && curl -Lo ./kind-darwin-amd64 https://github.com/kubernetes-sigs/kind/releases/download/v0.4.0/kind-darwin-amd64
+  $ chmod +x ./kind-darwin-amd64 && sudo mv ./kind-darwin-amd64 /usr/local/bin/kind
+  ```
+
+- Запуск kind
+
+  ```bash
+  $ kind create cluster
+  $ export KUBECONFIG="$(kind get kubeconfig-path --name="kind")"
+  ```
+
+### StatefulSet
+
+- Применим манифест для StatefulSet
+
+  ```bash
+  $ curl -Lo ./minio-statefulset.yaml https://raw.githubusercontent.com/express42/otus-platform-snippets/master/Module-02/Kuberenetes-volumes/minio-statefulset.yaml
+  $ kubectl -f minio-statefulset.yaml
+  ```
+
+  <details><summary>Подробнее</summary><p>
+  
+  ```bash
+  $ kubectl get pods
+    NAME      READY   STATUS    RESTARTS   AGE
+    minio-0   1/1     Running   0          17m
+  ```
+
+  ```bash
+  $ kubectl get statefulsets
+    NAME    READY   AGE
+    minio   1/1     20m
+  ```
+
+  ```bash
+  $ kubectl get pv
+    NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                  STORAGECLASS   REASON   AGE
+    pvc-5d582e73-50ff-4910-9d71-a0d9fb877f36   10Gi       RWO            Delete           Bound    default/data-minio-0   standard                20m
+  ```
+
+  ```bash
+  $ kubectl get pvc
+    NAME           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+    data-minio-0   Bound    pvc-5d582e73-50ff-4910-9d71-a0d9fb877f36   10Gi       RWO            standard       20m
+  ```
+  </p>
+  </details>
+
+### Headless Service
+
+- Применим манифест для Headless Service
+
+  ```bash
+  $ curl -Lo ./minio-headless-service.yaml https://raw.githubusercontent.com/express42/otus-platform-snippets/master/Module-02/Kuberenetes-volumes/minio-headless-service.yaml
+  $ kubectl -f minio-headless-service.yaml
+  ```
+
+  <details><summary>Подробнее</summary><p>
+  
+  ```bash
+  $ kubectl get service
+    NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)    AGE
+    kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP    36m
+    minio        ClusterIP   None         <none>        9000/TCP   27m
+  ```
+  </p>
+  </details>
+
+### Secrets
+
+- Создание Secret
+
+  ```bash
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: minio
+  data:
+    access_key: bWluaW8=
+    secret_key: bWluaW8xMjM=
+  ```
+- Применение манифеста с секретом
+
+  ```bash
+  $ kubectl apply -f kubernetes-volumes/minio-secret.yaml
+    secret/minio created
+  ```
+
+  <details><summary>Подробнее</summary><p>
+  
+  ```bash
+  $ kubectl get secrets
+    NAME                  TYPE                                  DATA   AGE
+    default-token-f8dkg   kubernetes.io/service-account-token   3      38m
+    minio                 Opaque                                2      6s
+  ```
+  </p>
+  </details>
+
+- Обновляем StatefulSet для использования внось созданного секрета
+
+  ```bash
+  ...
+
+      spec:
+      containers:
+      - name: minio
+        env:
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio
+              key: access_key
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio
+              key: secret_key
+        image: minio/minio:RELEASE.2019-07-10T00-34-56Z
+  
+  ...
+  ```
